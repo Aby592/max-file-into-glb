@@ -246,6 +246,16 @@
                     dst.emissionMap = exportMap emission folder #color
                 )
             )
+            ((classOf src as string) == "VRayOverrideMtl"):
+            (
+                -- Export the surface visible to the camera. Other slots only
+                -- replace this surface for specific V-Ray ray types.
+                local visibleMtl = valueOr src #baseMtl undefined
+                if visibleMtl == undefined or not (valueOr src #baseMtl_on true) do
+                    throw ("Assign and enable a Base material on " + src.name + " (VRayOverrideMtl), then export again.")
+                dst = copy (convertMaterial visibleMtl folder sources results)
+                dst.name = src.name
+            )
             ((classOf src as string) == "VRayBlendMtl"):
             (
                 local baseLayer = getSubMtl src 1
