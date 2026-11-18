@@ -104,6 +104,41 @@
         result
     )
 
+    -- Flatten one coat in stack order. A constant Mix with identical endpoints
+    -- supplies a gray mask without relying on the Mix spinner's display units.
+    fn blendCoat under coat weight mask folder =
+    (
+        if mask == undefined and weight >= 1 do return (copy coat)
+        if not (isKindOf under glTFMaterial and isKindOf coat glTFMaterial) do
+            throw ("Cannot flatten coat " + coat.name + " over " + under.name + ". Both layers need glTF-compatible PBR channels.")
+        local result = copy under
+        local gray = white * weight
+        local coverage = if mask != undefined then mask else Mix color1:gray color2:gray
+        for pair in #(#(#baseColor,#baseColorMap), #(#roughness,#roughnessMap), #(#metalness,#metalnessMap), #(#emissionColor,#emissionMap), #(#normal,#normalMap), #(undefined,#AlphaMap)) do
+        (
+            local factor = pair[1]
+            local slot = pair[2]
+            local a = getProperty under slot
+            local b = getProperty coat slot
+            local va = if factor != undefined then getProperty under factor else white
+            local vb = if factor != undefined then getProperty coat factor else white
+            if slot == #normalMap do (va = color 128 128 255; vb = va)
+            if a == undefined and b == undefined and mask == undefined and factor != undefined and slot != #normalMap then
+                setProperty result factor (va * (1-weight) + vb * weight)
+            else if a != undefined or b != undefined or va != vb do
+            (
+                local ca = if isKindOf va Number then white * va else va
+                local cb = if isKindOf vb Number then white * vb else vb
+                local mixed = Mix color1:ca color2:cb map1:a map2:b mask:coverage
+                local role = if slot == #baseColorMap or slot == #emissionMap then #color else #data
+                setProperty result slot (exportMap mixed folder role)
+                if factor != undefined do setProperty result factor (if isKindOf (getProperty under factor) Number then 1.0 else white)
+                if slot == #AlphaMap do result.alphaMode = 3
+            )
+        )
+        result
+    )
+
     fn convertMaterial src folder sources results =
     (
         if src == undefined do return undefined
@@ -171,6 +206,45 @@
                     dst.emissionColor = white
                     dst.emissionMap = exportMap emission folder #color
                 )
+            )
+            ((classOf src as string) == "VRayBlendMtl"):
+            (
+                local baseLayer = getSubMtl src 1
+                if baseLayer != undefined then dst = copy (convertMaterial baseLayer folder sources results)
+                else
+                (
+                    dst = glTFMaterial()
+                    dst.alphaMode = 3
+                    dst.AlphaMap = exportMap (Mix color1:black color2:black) folder #data
+                )
+                local amounts = valueOr src #texmap_blend_multiplier (valueOr src #texmap_blend_mult undefined)
+                local switches = valueOr src #coatMtl_on undefined
+                for i = 1 to src.coatMtl.count where src.coatMtl[i] != undefined do
+                (
+                    if switches == undefined or switches[i] do
+                    (
+                        local tint = src.blend[i]
+                        local weight = (tint.r + tint.g + tint.b) / 765.0
+                        local mask = src.texmap_blend[i]
+                        if mask != undefined and amounts != undefined do
+                        (
+                            local fraction = (amax 0.0 (amin 100.0 amounts[i])) / 100.0
+                            if fraction == 0 then mask = undefined
+                            else if fraction < 1 do
+                            (
+                                local g = white * weight
+                                local m = white * fraction
+                                mask = Mix color1:g map2:mask mask:(Mix color1:m color2:m)
+                            )
+                        )
+                        if mask != undefined or weight > 0 do
+                        (
+                            local coat = convertMaterial src.coatMtl[i] folder sources results
+                            dst = blendCoat dst coat weight mask folder
+                        )
+                    )
+                )
+                dst.name = src.name
             )
             ((classOf src as string) == "VRay2SidedMtl"):
             (
