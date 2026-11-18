@@ -1,6 +1,6 @@
 # 3ds Max product exporter for GLB
 
-Drag [AH_ProductToGLB.ms](./AH_ProductToGLB.ms) into a 3ds Max viewport, choose a product scene, and export the meshes under `AH_Model` as one GLB. The exporter works on temporary copies so the original product keeps its materials and modifiers.
+Drag [AH_ProductToGLB.ms](./AH_ProductToGLB.ms) into a 3ds Max viewport, choose a product scene, and export a product made of one or more meshes as one GLB. The exporter works on temporary copies so the original product keeps its materials and modifiers.
 
 ## Prepare the scene
 
@@ -12,7 +12,7 @@ Drag [AH_ProductToGLB.ms](./AH_ProductToGLB.ms) into a 3ds Max viewport, choose 
 
 1. Download `AH_ProductToGLB.ms` using GitHub’s **Download raw file** button.
 2. Drag the script into a 3ds Max viewport, or choose **Scripting → Run Script**. Save any open work if Max prompts you.
-3. Choose the source `.max` file in the browser. If the product group is missing, duplicated, or empty, the script uses the sole exportable mesh outside `Studio_Setup` when there is exactly one. Otherwise, choose the product group or its parts in the selection window. Canceling stops the export. The script converts the product materials and reports the output path.
+3. Choose the source `.max` file in the browser. If there is no usable product group, the script treats all exportable meshes outside `Studio_Setup` as parts of one model. It asks you to choose the parts if it finds duplicate product roots, no candidates, or a candidate under a name such as `Stage`, `Floor`, or `Backdrop`. For scenes with unrelated geometry, put the intended parts under `AH_Model` to define the export boundary. Canceling stops the export. The script converts the product materials and reports the output path.
 
 For example, `Models/Apples.max` produces `Models/glb/Apples.glb`. If that name is taken, the next export uses `Apples_1.glb`, then `Apples_2.glb`. Import the resulting GLB into Blender and use Material Preview to inspect it.
 

@@ -52,15 +52,25 @@
         if roots.count == 1 do productMeshes roots[1] meshes
         if meshes.count > 0 do return meshes
 
-        -- A single mesh outside the standard studio rig needs no selection.
+        -- In a one-product file, loose mesh nodes are also product parts.
         local candidates = #()
+        local possibleBackdrop = false
         for obj in objects where isProductMesh obj do
         (
             local ancestor = obj
-            while ancestor != undefined and (productNameKey ancestor.name) != "studiosetup" do ancestor = ancestor.parent
-            if ancestor == undefined do append candidates obj
+            local staged = false
+            while ancestor != undefined and (productNameKey ancestor.name) != "studiosetup" do
+            (
+                if (findItem #("stage","backdrop","background","floor","ground","cyclorama") (productNameKey ancestor.name)) > 0 do staged = true
+                ancestor = ancestor.parent
+            )
+            if ancestor == undefined do
+            (
+                append candidates obj
+                if staged do possibleBackdrop = true
+            )
         )
-        if candidates.count == 1 do return candidates
+        if candidates.count > 0 and not possibleBackdrop and roots.count <= 1 do return candidates
 
         local chosen = selectByName title:"Choose the product group or its mesh parts (exclude stage and backdrop)" buttonText:"Export product" single:false
         if chosen == undefined do return undefined
