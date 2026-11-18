@@ -5,14 +5,14 @@ Drag [AH_ProductToGLB.ms](./AH_ProductToGLB.ms) into a 3ds Max viewport, choose 
 ## Prepare the scene
 
 - Use 3ds Max with its glTF material and GLB exporter available. Install a compatible V-Ray version on the export computer for scenes that use V-Ray.
-- Put the product meshes under one object or group named `AH_Model`. Keep the studio lights, stage, backdrop, and camera outside that group.
+- For automatic selection, put the product meshes under one object or group named `AH_Model`. Keep the studio lights, stage, backdrop, and camera outside that group. The script also recognizes `AH Model`, `AH-Model`, and `AHModel`.
 - Check that the product looks correct in Max and that the export computer can read its texture images, including files on shared drives.
 
 ## Export
 
 1. Download `AH_ProductToGLB.ms` using GitHub’s **Download raw file** button.
 2. Drag the script into a 3ds Max viewport, or choose **Scripting → Run Script**. Save any open work if Max prompts you.
-3. Choose the source `.max` file in the browser. The script opens the scene, finds the product, converts its materials, and reports the output path.
+3. Choose the source `.max` file in the browser. If the product group is missing, duplicated, or empty, the script uses the sole exportable mesh outside `Studio_Setup` when there is exactly one. Otherwise, choose the product group or its parts in the selection window. Canceling stops the export. The script converts the product materials and reports the output path.
 
 For example, `Models/Apples.max` produces `Models/glb/Apples.glb`. If that name is taken, the next export uses `Apples_1.glb`, then `Apples_2.glb`. Import the resulting GLB into Blender and use Material Preview to inspect it.
 

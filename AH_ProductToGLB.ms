@@ -24,10 +24,49 @@
         if isKindOf tex TextureMap then tex else if isKindOf value TextureMap then value else undefined
     )
 
+    fn productNameKey name =
+    (
+        local key = toLower name
+        for separator in #(" ", "_", "-") do key = substituteString key separator ""
+        key
+    )
+
+    fn isProductMesh obj =
+    (
+        superClassOf obj == GeometryClass and canConvertTo obj Editable_Mesh
+    )
+
     fn productMeshes root result =
     (
-        if superClassOf root == GeometryClass and canConvertTo root Editable_Mesh do append result root
+        if isProductMesh root do appendIfUnique result root
         for child in root.children do productMeshes child result
+    )
+
+    fn findProductMeshes =
+    (
+        -- Keep the established naming convention as the first choice.
+        local roots = for obj in objects where (toLower obj.name) == "ah_model" collect obj
+        if roots.count == 0 do
+            roots = for obj in objects where (productNameKey obj.name) == "ahmodel" collect obj
+        local meshes = #()
+        if roots.count == 1 do productMeshes roots[1] meshes
+        if meshes.count > 0 do return meshes
+
+        -- A single mesh outside the standard studio rig needs no selection.
+        local candidates = #()
+        for obj in objects where isProductMesh obj do
+        (
+            local ancestor = obj
+            while ancestor != undefined and (productNameKey ancestor.name) != "studiosetup" do ancestor = ancestor.parent
+            if ancestor == undefined do append candidates obj
+        )
+        if candidates.count == 1 do return candidates
+
+        local chosen = selectByName title:"Choose the product group or its mesh parts (exclude stage and backdrop)" buttonText:"Export product" single:false
+        if chosen == undefined do return undefined
+        for obj in chosen do productMeshes obj meshes
+        if meshes.count == 0 do throw "The selection contains no exportable product meshes."
+        meshes
     )
 
     -- Bake the connected 2D map as a whole, including its color/output nodes.
@@ -371,11 +410,8 @@
                 format "Scene references missing plug-in: %\n" entry
             )
         if not loaded do throw ("3ds Max could not open:\n" + modelPath + detail + "\nOpen it with File > Open to see Max's loading messages.")
-        local roots = for obj in objects where (toLower obj.name) == "ah_model" collect obj
-        if roots.count != 1 do throw "Expected one product named AH_Model in the scene."
-        local meshes = #()
-        productMeshes roots[1] meshes
-        if meshes.count == 0 do throw "AH_Model contains no exportable meshes."
+        local meshes = findProductMeshes()
+        if meshes == undefined do return undefined
         local duplicates = #()
         local oldSelection = selection as array
         local sources = #()
